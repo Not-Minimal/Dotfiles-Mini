@@ -1,17 +1,8 @@
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
-
-# Homebrew
 export PATH="/opt/homebrew/bin:$PATH" 
+eval "$(oh-my-posh init zsh --config /Users/not/Developments/Dotfiles-Mini/zsh/themes/night-owl.omp.json)"
 
-source /opt/homebrew/share/powerlevel10k/powerlevel10k.zsh-theme
-
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+export ZSH_CUSTOM=/Users/not/Developments/Dotfiles-Mini/zsh
+ZSH_THEME="robbyrussell"
 
 # Configuración del historial
 HISTSIZE=10000
@@ -22,16 +13,14 @@ setopt HIST_FIND_NO_DUPS     # No duplicados al buscar
 setopt INC_APPEND_HISTORY    # Agregar comandos al historial inmediatamente
 
 # Mejoras de autocompletado
+fpath=($ZSH_CUSTOM/zsh-completions/src $fpath)
 autoload -Uz compinit
 compinit
 zstyle ':completion:*' menu select  # Menú interactivo
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'  # Case insensitive
+zstyle ':completion:*' use-cache on  # Activar caché de completions
+zstyle ':completion:*' cache-path ~/.zsh/cache  # Ruta del caché
 
-# Funciones
-# Crear un directorio y entrar en él
-mkcd() {
-    mkdir -p "$1" && cd "$1"
-}
 
 # Alias Propios
 alias ls="lsd"
@@ -44,8 +33,10 @@ alias tconf='tmux source-file ~/.tmux.conf || echo "No tmux session activa"'
 alias studio="npx prisma studio"
 
 # Comandos personalizados
-alias ll="lsd -la --group-directories-first"
-alias ls="eza --color=always --long --git --no-filesize --icons=always --no-time --no-user --no-permissions"
+alias ll="eza -lah --icons --git --group-directories-first"
+alias ls="eza --icons --git"
+alias lt="eza --tree --level=2 --icons"
+alias lta="eza --tree --level=3 --icons --git-ignore"
 alias ..="cd .."
 alias ...="cd ../.."
 alias ....="cd ../../.."
@@ -83,33 +74,64 @@ alias docs="cd ~/Documents"
 alias cat="bat"
 # Abrir archivos con Vim directamente
 alias v="vim"
+# JSON con colores y paginación
+alias jqp="jq -C | less -R"
+# Herramientas CLI mejoradas
+alias find="fd"
+alias rg="rg --smart-case --hidden"
+alias lzd="lazydocker"
 
 # Plugins
-plugins=(git zsh-autosuggestions zsh-syntax-highlighting zsh-history-substring-search)
-source ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-source ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=white,bg=blue,italic"
-# Configuración de zsh-history-substring-search
-source ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh
+source $ZSH_CUSTOM/zsh-autosuggestions/zsh-autosuggestions.zsh
+source $ZSH_CUSTOM/zsh-history-substring-search/zsh-history-substring-search.zsh
+source $ZSH_CUSTOM/zsh-you-should-use/you-should-use.plugin.zsh
+source $ZSH_CUSTOM/zsh-autopair/autopair.zsh
+source $ZSH_CUSTOM/zsh-vi-mode/zsh-vi-mode.plugin.zsh
+source $ZSH_CUSTOM/zsh-abbr/zsh-abbr.zsh
 
+# Configuración de autosuggestions
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=8'  # Color gris para sugerencias
+ZSH_AUTOSUGGEST_STRATEGY=(history completion)  # Sugiere desde historial Y completions
+ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20  # Limita el tamaño del buffer
+
+# Bindkeys para history-substring-search
 bindkey "^[[OA" history-substring-search-up   # Flecha option + arriba ⬆️
 bindkey "^[[OB" history-substring-search-down # Flecha option + abajo ⬇️
 
-# Añade estos debajo de tus bindkeys actuales:
-
-# WezTerm suele enviar ALT+Up/Down como CSI 1;3 A/B
+# WezTerm/Ghostty suelen enviar ALT+Up/Down como CSI 1;3 A/B
 bindkey '\e[1;3A' history-substring-search-up
 bindkey '\e[1;3B' history-substring-search-down
 
-# Por si WezTerm envía SS3 con ALT (algunas configuraciones):
+# Por si envía SS3 con ALT (algunas configuraciones):
 bindkey '^[\eOA' history-substring-search-up
 bindkey '^[\eOB' history-substring-search-down
+
+# Fancy Ctrl+Z - Toggle entre fg y clear
+fancy-ctrl-z () {
+  if [[ $#BUFFER -eq 0 ]]; then
+    BUFFER="fg"
+    zle accept-line
+  else
+    zle push-input
+    zle clear-screen
+  fi
+}
+zle -N fancy-ctrl-z
+bindkey '^Z' fancy-ctrl-z
+
+# Globalias - Aliases globales que se expanden
+alias -g G='| grep'
+alias -g L='| less'
+alias -g J='| jq'
+alias -g NE='2> /dev/null'
+alias -g H='| head'
+alias -g T='| tail'
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 export FZF_CTRL_T_OPTS="--preview 'bat -n --color=always --line-range :500 {}'"
 export FZF_ALT_C_OPTS="--preview 'eza --tree --color=always {} | head -200'"
 eval "$(fzf --zsh)"
-source ~/fzf-git.sh/fzf-git.sh
+# source ~/fzf-git.sh/fzf-git.sh  # Comentado - el archivo no existe
 export FZF_DEFAULT_OPTS=$FZF_DEFAULT_OPTS'
   --color=fg:#7cbba3,fg+:#d0d0d0,bg:-1,bg+:#090316
   --color=hl:#248eff,hl+:#53ff7e,info:#58ff69,marker:#ffffff
@@ -120,10 +142,6 @@ export FZF_DEFAULT_OPTS=$FZF_DEFAULT_OPTS'
   --margin="1" --prompt="👨🏻‍💻" --marker="" --pointer="🚀"
   --separator="" --scrollbar=""'
 
-export PATH="$HOME/depot_tools:$PATH"
-export PATH="/Library/TeX/texbin:$PATH"
-source ~/powerlevel10k/powerlevel10k.zsh-theme
-export PATH="/opt/homebrew/opt/postgresql@15/bin:$PATH"
 export PATH="/opt/homebrew/opt/postgresql@18/bin:$PATH"
 # --- Configuración de NVM (Node Version Manager) ---
 export NVM_DIR="$HOME/.nvm"
@@ -131,4 +149,11 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"      # Carga nvm
 [ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" # Carga el autocompletado
 # ---
-eval "$(zoxide init zsh)"
+# eval "$(zoxide init zsh)"  # Comentado - reemplazado por z.lua (más rápido)
+eval "$(lua /opt/homebrew/share/z.lua/z.lua --init zsh)"
+
+# Atuin - Historial sincronizado con búsqueda mejorada
+eval "$(atuin init zsh)"
+
+# Este plugin debe cargarse al final (3x más rápido que zsh-syntax-highlighting)
+source $ZSH_CUSTOM/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
